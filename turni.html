@@ -13,7 +13,7 @@
 <div id="lista">Caricamento...</div>
 
 <script>
-// 🔴 CAMBIA SOLO QUESTO LINK con il RAW del tuo CSV su GitHub
+// 🔴 Link RAW del tuo CSV su GitHub
 const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
 
 // ---------- FUNZIONI ----------
@@ -27,7 +27,7 @@ async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(",");
+  const titoli = righe[0].split(","); // titoli servizi rimangono separati da virgola
   const nomiMap = new Map(); // nome -> array di turni
 
   const oggi = new Date();
@@ -41,7 +41,8 @@ async function caricaNomi(){
 
     for(let j=1;j<celle.length;j++){
       if(!celle[j]) continue;
-      celle[j].split(",").forEach(n=>{
+      // 🔹 Separatore modificato da "," a ";"
+      celle[j].split(";").forEach(n=>{
         const nome = n.trim();
         if(nome){
           if(!nomiMap.has(nome)) nomiMap.set(nome, []);
