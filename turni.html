@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Turni Domenica</title>
+</head>
+<body>
+<h2>Scarica i tuoi turni sul calendario</h2>
+<label>Scrivi il tuo nome:</label>
+<input type="text" id="nome" placeholder="Es. Mario Rossi">
+<button onclick="generaICS()">Genera file .ics</button>
+
+<div id="link" style="margin-top:20px;"></div>
+
+<script>
+// URL raw del CSV su GitHub
+const urlCSV = "https://raw.githubusercontent.com/TuoNome/turni-domenica/main/turni.csv";
+
+function formatDateICS(d) {
+    // Formatta in YYYYMMDDTHHMMSSZ
+    const pad = n => n<10?"0"+n:n;
+    return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+}
+
+async function generaICS() {
+    const nomeUtente = document.getElementById("nome").value.trim().toLowerCase();
+    if(!nomeUtente) { alert("Scrivi il tuo nome"); return; }
+
+    const resp = await fetch(urlCSV);
+    const text = await resp.text();
+    const righe = text.split("\n").filter(r => r.trim() !== "");
+    const titoli = righe[0].split(",");
+
+    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n";
+
+    for(let i=1; i<righe.length; i++) {
+        const celle = righe[i].split(",");
+        const data = celle[0];
+        const parti = data.split("/");
+        if(parti.length !== 3) continue;
+        const giorno = parseInt(parti[0],10);
+        const mese = parseInt(parti[1],10)-1;
+        const anno = 2000 + parseInt(parti[2],10);
+
+        // Orario di default 10:00-11:00
+        const startDate = new Date(Date.UTC(anno,mese,giorno,10,0,0));
+        const endDate = new Date(Date.UTC(anno,mese,giorno,11,0,0));
+
+        for(let j=1;j<celle.length;j++) {
+            const nomi = celle[j].split(",").map(n=>n.trim().toLowerCase());
+            if(nomi.includes(nomeUtente)) {
+                const titolo = "Servizio della domenica";
+                const descrizione = `${titoli[j]} – ${nomeUtente}`;
+                ics += "BEGIN:VEVENT\n";
+                ics += `SUMMARY:${titolo}\n`;
+                ics += `DESCRIPTION:${descrizione}\n`;
+                ics += `DTSTART:${formatDateICS(startDate)}\n`;
+                ics += `DTEND:${formatDateICS(endDate)}\n`;
+                ics += "END:VEVENT\n";
+            }
+        }
+    }
+
+    ics += "END:VCALENDAR";
+
+    // Crea link per scaricare il file
+    const blob = new Blob([ics], {type: 'text/calendar'});
+    const url = URL.createObjectURL(blob);
+    const linkDiv = document.getElementById("link");
+    linkDiv.innerHTML = `<a href="${url}" download="turni.ics">Scarica il tuo file .ics con tutti i turni</a>`;
+}
+</script>
+</body>
+</html>
