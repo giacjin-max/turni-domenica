@@ -16,42 +16,51 @@
 // 🔴 Link RAW del tuo CSV su GitHub
 const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
 
-// ---------- FUNZIONI ----------
+// Funzione per formattare le date in ICS
 function formatDateICS(d){
   const p = n => n.toString().padStart(2,"0");
   return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00";
 }
 
-// ---------- CARICA NOMI (solo con turni futuri) ----------
+// Controlla se il nome è cinese (ritorna true se contiene caratteri non latini)
+function isCinese(nome){
+  return /[^\u0000-\u007F]/.test(nome);
+}
+
+// Carica i nomi e turni dal CSV
 async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(/,|;|\//).map(s => s.trim()); // separatori flessibili
+  if(righe.length < 2){ document.getElementById("lista").innerText = "CSV vuoto"; return; }
+
+  const titoli = righe[0].split(";").map(s => s.trim());
   const nomiMap = new Map();
 
   const oggi = new Date();
   oggi.setHours(0,0,0,0);
 
   for(let i=1;i<righe.length;i++){
-    const celle = righe[i].split(",");
+    const celle = righe[i].split(";").map(c=>c.trim());
     if(celle.length === 0) continue;
 
-    const [g,m,a] = celle[0].trim().split("/");
+    const [g,m,a] = celle[0].split("/").map(x=>x.trim());
     if(!g || !m || !a) continue; // salta riga se data mancante
     const dataTurno = new Date(parseInt(a), parseInt(m)-1, parseInt(g));
     if(dataTurno < oggi) continue;
 
     for(let j=1;j<celle.length;j++){
-      if(!celle[j] || !celle[j].trim()) continue; // salta celle vuote
-
+      if(!celle[j]) continue; // salta celle vuote
       const servizio = titoli[j] ? titoli[j].trim() : "";
-      celle[j].split(/;|,|\//).forEach(n=>{
+      if(!servizio) continue;
+
+      // gestisce più nomi nella stessa cella, separati da ,
+      celle[j].split(",").forEach(n=>{
         const nome = n.trim();
-        if(nome){
-          if(!nomiMap.has(nome)) nomiMap.set(nome, []);
-          nomiMap.get(nome).push({data: dataTurno, servizio});
-        }
+        if(!nome || isCinese(nome)) return; // salta nomi cinesi o vuoti
+
+        if(!nomiMap.has(nome)) nomiMap.set(nome, []);
+        nomiMap.get(nome).push({data: dataTurno, servizio});
       });
     }
   }
@@ -77,7 +86,7 @@ async function caricaNomi(){
   });
 }
 
-// ---------- GENERA FILE ICS ----------
+// Genera file ICS per un nome
 function generaICS(nomeUtente, turni){
   let ics = 
 `BEGIN:VCALENDAR
@@ -115,7 +124,7 @@ END:VEVENT
   link.click();
 }
 
-// ---------- AVVIO ----------
+// Avvia tutto
 caricaNomi();
 </script>
 
