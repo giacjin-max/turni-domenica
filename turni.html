@@ -18,29 +18,51 @@ const urlCSV = "https://raw.githubusercontent.com/TuoUsername/tuo-repo/main/turn
 
 // ---------- FUNZIONI ----------
 function formatDateICS(d){
-  const p=n=>n<10?'0'+n:n;
-  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}00Z`;
+  const p = n => n.toString().padStart(2,"0");
+  return (
+    d.getFullYear() +
+    p(d.getMonth()+1) +
+    p(d.getDate()) +
+    "T" +
+    p(d.getHours()) +
+    p(d.getMinutes()) +
+    "00"
+  );
 }
 
-// ---------- CARICA NOMI ----------
+// ---------- CARICA NOMI (solo con turni futuri) ----------
 async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const nomiSet = new Set();
+  const titoli = righe[0].split(",");
+  const nomiMap = new Map(); // nome -> array di date future
+
+  const oggi = new Date();
+  oggi.setHours(0,0,0,0); // solo data
 
   for(let i=1;i<righe.length;i++){
-    righe[i].split(",").slice(1).forEach(c=>{
-      c.split(",").forEach(n=>{
-        if(n.trim()) nomiSet.add(n.trim());
+    const celle = righe[i].split(",");
+    const [g,m,a] = celle[0].split("/");
+    const dataTurno = new Date(2000+ +a, parseInt(m)-1, parseInt(g));
+    if(dataTurno < oggi) continue; // solo date future o odierne
+
+    for(let j=1;j<celle.length;j++){
+      if(!celle[j]) continue;
+      celle[j].split(",").forEach(n=>{
+        const nome = n.trim();
+        if(nome){
+          if(!nomiMap.has(nome)) nomiMap.set(nome, []);
+          nomiMap.get(nome).push({data: dataTurno, servizio: titoli[j]});
+        }
       });
-    });
+    }
   }
 
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
 
-  [...nomiSet].sort().forEach(nome=>{
+  [...nomiMap.keys()].sort().forEach(nome=>{
     const btn = document.createElement("button");
     btn.textContent = nome;
     btn.style.display="block";
@@ -48,41 +70,29 @@ async function caricaNomi(){
     btn.style.padding="12px";
     btn.style.margin="8px 0";
     btn.style.fontSize="16px";
-    btn.onclick = ()=>generaICS(nome);
+    btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
 }
 
 // ---------- GENERA FILE ICS ----------
-async function generaICS(nomeUtente){
-  const r = await fetch(urlCSV);
-  const t = await r.text();
-  const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(",");
-
-  let ics =
+function generaICS(nomeUtente, turni){
+  let ics = 
 `BEGIN:VCALENDAR
 VERSION:2.0
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 `;
 
-  let uid=1;
+  turni.forEach((t, index)=>{
+    const start = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 15,0,0);
+    const end   = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 18,0,0);
 
-  for(let i=1;i<righe.length;i++){
-    const celle = righe[i].split(",");
-    const [g,m,a] = celle[0].split("/");
-    const start = new Date(Date.UTC(2000+ +a, m-1, g, 10));
-    const end = new Date(start.getTime() + 60*60*1000);
-
-    for(let j=1;j<celle.length;j++){
-      const nomi = celle[j].split(",").map(n=>n.trim());
-      if(nomi.includes(nomeUtente)){
-        ics +=
+    ics += 
 `BEGIN:VEVENT
-UID:${uid++}@turnidomenica
+UID:${nomeUtente}_${t.data.getDate()}-${t.data.getMonth()+1}-${t.data.getFullYear()}_${t.servizio}@turnidomenica
 SUMMARY:Servizio della domenica
-DESCRIPTION:${titoli[j]} – ${nomeUtente}
+DESCRIPTION:${t.servizio} – ${nomeUtente}
 DTSTART:${formatDateICS(start)}
 DTEND:${formatDateICS(end)}
 BEGIN:VALARM
@@ -92,9 +102,7 @@ DESCRIPTION:Promemoria servizio
 END:VALARM
 END:VEVENT
 `;
-      }
-    }
-  }
+  });
 
   ics += "END:VCALENDAR";
 
