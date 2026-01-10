@@ -35,17 +35,19 @@ async function caricaNomi(){
 
   for(let i=1;i<righe.length;i++){
     const celle = righe[i].split(",");
-    const [g,m,a] = celle[0].split("/");
-    const dataTurno = new Date(2000 + parseInt(a), parseInt(m)-1, parseInt(g));
+    const [g,m,a] = celle[0].trim().split("/");
+    const dataTurno = new Date(parseInt(a), parseInt(m)-1, parseInt(g));
     if(dataTurno < oggi) continue;
 
     for(let j=1;j<celle.length;j++){
       if(!celle[j]) continue;
+      const servizio = titoli[j] ? titoli[j].trim() : null;
+      if(!servizio) continue;
       celle[j].split(/;|\//).forEach(n=>{
         const nome = n.trim();
         if(nome){
           if(!nomiMap.has(nome)) nomiMap.set(nome, []);
-          nomiMap.get(nome).push({data: dataTurno, servizio: titoli[j]});
+          nomiMap.get(nome).push({data: dataTurno, servizio});
         }
       });
     }
@@ -88,7 +90,7 @@ METHOD:PUBLISH
     ics += 
 `BEGIN:VEVENT
 UID:${nomeUtente}_${t.data.getDate()}-${t.data.getMonth()+1}-${t.data.getFullYear()}_${t.servizio}@turnidomenica
-SUMMARY:${t.servizio}  
+SUMMARY:${t.servizio}
 DESCRIPTION:${t.servizio} – ${nomeUtente}
 DTSTART:${formatDateICS(start)}
 DTEND:${formatDateICS(end)}
