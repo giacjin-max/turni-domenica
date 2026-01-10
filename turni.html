@@ -1,73 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-  <title>Turni Domenica</title>
+<meta charset="utf-8">
+<title>Turni Domenica</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
-<body>
-<h2>Scarica i tuoi turni sul calendario</h2>
-<label>Scrivi il tuo nome:</label>
-<input type="text" id="nome" placeholder="Es. Mario Rossi">
-<button onclick="generaICS()">Genera file .ics</button>
 
-<div id="link" style="margin-top:20px;"></div>
+<body style="font-family:Arial; padding:15px">
+
+<h2>Tocca il tuo nome per salvare i turni</h2>
+
+<div id="lista">Caricamento...</div>
 
 <script>
-// URL raw del CSV su GitHub
-const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
+// 🔴 CAMBIA SOLO QUESTA RIGA
+const urlCSV = "https://raw.githubusercontent.com/TuoUsername/tuo-repo/main/turni.csv";
 
-function formatDateICS(d) {
-    // Formatta in YYYYMMDDTHHMMSSZ
-    const pad = n => n<10?"0"+n:n;
-    return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+// ---------- FUNZIONI ----------
+function formatDateICS(d){
+  const p=n=>n<10?'0'+n:n;
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}00Z`;
 }
 
-async function generaICS() {
-    const nomeUtente = document.getElementById("nome").value.trim().toLowerCase();
-    if(!nomeUtente) { alert("Scrivi il tuo nome"); return; }
+// ---------- CARICA NOMI ----------
+async function caricaNomi(){
+  const r = await fetch(urlCSV);
+  const t = await r.text();
+  const righe = t.split("\n").filter(x=>x.trim());
+  const nomiSet = new Set();
 
-    const resp = await fetch(urlCSV);
-    const text = await resp.text();
-    const righe = text.split("\n").filter(r => r.trim() !== "");
-    const titoli = righe[0].split(",");
+  for(let i=1;i<righe.length;i++){
+    righe[i].split(",").slice(1).forEach(c=>{
+      c.split(",").forEach(n=>{
+        if(n.trim()) nomiSet.add(n.trim());
+      });
+    });
+  }
 
-    let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n";
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
 
-    for(let i=1; i<righe.length; i++) {
-        const celle = righe[i].split(",");
-        const data = celle[0];
-        const parti = data.split("/");
-        if(parti.length !== 3) continue;
-        const giorno = parseInt(parti[0],10);
-        const mese = parseInt(parti[1],10)-1;
-        const anno = 2000 + parseInt(parti[2],10);
+  [...nomiSet].sort().forEach(nome=>{
+    const btn = document.createElement("button");
+    btn.textContent = nome;
+    btn.style.display="block";
+    btn.style.width="100%";
+    btn.style.padding="12px";
+    btn.style.margin="8px 0";
+    btn.style.fontSize="16px";
+    btn.onclick = ()=>generaICS(nome);
+    lista.appendChild(btn);
+  });
+}
 
-        // Orario di default 10:00-11:00
-        const startDate = new Date(Date.UTC(anno,mese,giorno,10,0,0));
-        const endDate = new Date(Date.UTC(anno,mese,giorno,11,0,0));
+// ---------- GENERA FILE ICS ----------
+async function generaICS(nomeUtente){
+  const r = await fetch(urlCSV);
+  const t = await r.text();
+  const righe = t.split("\n").filter(x=>x.trim());
+  const titoli = righe[0].split(",");
 
-        for(let j=1;j<celle.length;j++) {
-            const nomi = celle[j].split(",").map(n=>n.trim().toLowerCase());
-            if(nomi.includes(nomeUtente)) {
-                const titolo = "Servizio della domenica";
-                const descrizione = `${titoli[j]} – ${nomeUtente}`;
-                ics += "BEGIN:VEVENT\n";
-                ics += `SUMMARY:${titolo}\n`;
-                ics += `DESCRIPTION:${descrizione}\n`;
-                ics += `DTSTART:${formatDateICS(startDate)}\n`;
-                ics += `DTEND:${formatDateICS(endDate)}\n`;
-                ics += "END:VEVENT\n";
-            }
-        }
+  let ics =
+`BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
+
+  let uid=1;
+
+  for(let i=1;i<righe.length;i++){
+    const celle = righe[i].split(",");
+    const [g,m,a] = celle[0].split("/");
+    const start = new Date(Date.UTC(2000+ +a, m-1, g, 10));
+    const end = new Date(start.getTime() + 60*60*1000);
+
+    for(let j=1;j<celle.length;j++){
+      const nomi = celle[j].split(",").map(n=>n.trim());
+      if(nomi.includes(nomeUtente)){
+        ics +=
+`BEGIN:VEVENT
+UID:${uid++}@turnidomenica
+SUMMARY:Servizio della domenica
+DESCRIPTION:${titoli[j]} – ${nomeUtente}
+DTSTART:${formatDateICS(start)}
+DTEND:${formatDateICS(end)}
+BEGIN:VALARM
+TRIGGER:-P6D
+ACTION:DISPLAY
+DESCRIPTION:Promemoria servizio
+END:VALARM
+END:VEVENT
+`;
+      }
     }
+  }
 
-    ics += "END:VCALENDAR";
+  ics += "END:VCALENDAR";
 
-    // Crea link per scaricare il file
-    const blob = new Blob([ics], {type: 'text/calendar'});
-    const url = URL.createObjectURL(blob);
-    const linkDiv = document.getElementById("link");
-    linkDiv.innerHTML = `<a href="${url}" download="turni.ics">Scarica il tuo file .ics con tutti i turni</a>`;
+  const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `turni_${nomeUtente}.ics`;
+  link.click();
 }
+
+// ---------- AVVIO ----------
+caricaNomi();
 </script>
+
 </body>
 </html>
