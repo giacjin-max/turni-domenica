@@ -10,7 +10,7 @@
 
 <h2 style="font-size:16px; margin-bottom:10px;">Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
 
-<div id="lista">Caricamento...</div>
+<div id="lista" style="text-align:center;">Caricamento...</div>
 
 <script>
 // 🔴 Link RAW del tuo CSV su GitHub
@@ -57,15 +57,16 @@ async function caricaNomi(){
   [...nomiMap.keys()].sort().forEach(nome=>{
     const btn = document.createElement("button");
     btn.textContent = nome;
-    btn.style.display="block";
-    btn.style.width="100%";
-    btn.style.padding="4px 6px";      // piccolo
-    btn.style.margin="2px 0";         // piccolo
-    btn.style.fontSize="12px";        // piccolo
-    btn.style.textAlign="left";
-    btn.style.border="1px solid #ccc"; 
-    btn.style.borderRadius="4px"; 
-    btn.style.background="#f9f9f9";  
+    btn.style.display = "inline-block";       // permette più colonne
+    btn.style.width = "calc(50% - 10px)";     // due colonne con margini
+    btn.style.padding = "8px 10px";           // dimensione leggibile
+    btn.style.margin = "5px";                 // distanza tra pulsanti
+    btn.style.fontSize = "14px";              // leggibile
+    btn.style.textAlign = "center";
+    btn.style.border = "1px solid #ccc";
+    btn.style.borderRadius = "4px";
+    btn.style.background = "#f9f9f9";
+    btn.style.boxSizing = "border-box";       // include padding nella larghezza
     btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
