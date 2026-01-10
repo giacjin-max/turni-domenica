@@ -27,7 +27,7 @@ async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(","); // titoli servizi rimangono separati da virgola
+  const titoli = righe[0].split(","); // titoli servizi
   const nomiMap = new Map(); // nome -> array di turni
 
   const oggi = new Date();
@@ -41,8 +41,8 @@ async function caricaNomi(){
 
     for(let j=1;j<celle.length;j++){
       if(!celle[j]) continue;
-      // 🔹 Separatore modificato da "," a ";"
-      celle[j].split(";").forEach(n=>{
+      // 🔹 Separatore multiplo: ; o /
+      celle[j].split(/;|\//).forEach(n=>{
         const nome = n.trim();
         if(nome){
           if(!nomiMap.has(nome)) nomiMap.set(nome, []);
@@ -60,9 +60,9 @@ async function caricaNomi(){
     btn.textContent = nome;
     btn.style.display="block";
     btn.style.width="100%";
-    btn.style.padding="12px";
-    btn.style.margin="8px 0";
-    btn.style.fontSize="16px";
+    btn.style.padding="8px";      // più piccolo
+    btn.style.margin="4px 0";     // più piccolo
+    btn.style.fontSize="14px";    // più piccolo
     btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
