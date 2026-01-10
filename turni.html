@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body style="font-family:Arial; padding:15px">
+<body style="font-family:Arial; padding:10px; background:#fff">
 
-<h2>Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
+<h2 style="font-size:16px; margin-bottom:10px;">Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
 
 <div id="lista">Caricamento...</div>
 
@@ -27,8 +27,8 @@ async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(","); // titoli servizi
-  const nomiMap = new Map(); // nome -> array di turni
+  const titoli = righe[0].split(",");
+  const nomiMap = new Map();
 
   const oggi = new Date();
   oggi.setHours(0,0,0,0);
@@ -37,11 +37,10 @@ async function caricaNomi(){
     const celle = righe[i].split(",");
     const [g,m,a] = celle[0].split("/");
     const dataTurno = new Date(2000 + parseInt(a), parseInt(m)-1, parseInt(g));
-    if(dataTurno < oggi) continue; // solo turni futuri
+    if(dataTurno < oggi) continue;
 
     for(let j=1;j<celle.length;j++){
       if(!celle[j]) continue;
-      // 🔹 Separatore multiplo: ; o /
       celle[j].split(/;|\//).forEach(n=>{
         const nome = n.trim();
         if(nome){
@@ -60,9 +59,13 @@ async function caricaNomi(){
     btn.textContent = nome;
     btn.style.display="block";
     btn.style.width="100%";
-    btn.style.padding="8px";      // più piccolo
-    btn.style.margin="4px 0";     // più piccolo
-    btn.style.fontSize="14px";    // più piccolo
+    btn.style.padding="4px 6px";      // piccolo
+    btn.style.margin="2px 0";         // piccolo
+    btn.style.fontSize="12px";        // piccolo
+    btn.style.textAlign="left";
+    btn.style.border="1px solid #ccc"; 
+    btn.style.borderRadius="4px"; 
+    btn.style.background="#f9f9f9";  
     btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
