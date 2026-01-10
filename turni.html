@@ -57,16 +57,16 @@ async function caricaNomi(){
   [...nomiMap.keys()].sort().forEach(nome=>{
     const btn = document.createElement("button");
     btn.textContent = nome;
-    btn.style.display = "inline-block";       // permette più colonne
-    btn.style.width = "calc(50% - 10px)";     // due colonne con margini
-    btn.style.padding = "8px 10px";           // dimensione leggibile
-    btn.style.margin = "5px";                 // distanza tra pulsanti
-    btn.style.fontSize = "14px";              // leggibile
+    btn.style.display = "inline-block";       
+    btn.style.width = "calc(50% - 10px)";     
+    btn.style.padding = "8px 10px";           
+    btn.style.margin = "5px";                 
+    btn.style.fontSize = "14px";              
     btn.style.textAlign = "center";
     btn.style.border = "1px solid #ccc";
     btn.style.borderRadius = "4px";
     btn.style.background = "#f9f9f9";
-    btn.style.boxSizing = "border-box";       // include padding nella larghezza
+    btn.style.boxSizing = "border-box";       
     btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
@@ -88,7 +88,7 @@ METHOD:PUBLISH
     ics += 
 `BEGIN:VEVENT
 UID:${nomeUtente}_${t.data.getDate()}-${t.data.getMonth()+1}-${t.data.getFullYear()}_${t.servizio}@turnidomenica
-SUMMARY:Servizio della domenica
+SUMMARY:${t.servizio}  
 DESCRIPTION:${t.servizio} – ${nomeUtente}
 DTSTART:${formatDateICS(start)}
 DTEND:${formatDateICS(end)}
