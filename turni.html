@@ -4,103 +4,97 @@
 <meta charset="utf-8">
 <title>Turni Domenica</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial; padding:10px; background:#fff; }
+h2 { font-size:16px; margin-bottom:10px; text-align:center; }
+#lista { display: flex; flex-wrap: wrap; justify-content: center; }
+button {
+  flex: 0 0 calc(33.33% - 12px);
+  margin: 5px;
+  padding: 12px 8px;
+  font-size: 14px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f9f9f9;
+  box-sizing: border-box;
+}
+@media (max-width: 500px) {
+  button { flex: 0 0 calc(50% - 10px); font-size:13px; padding:10px 5px; }
+}
+</style>
 </head>
+<body>
 
-<body style="font-family:Arial; padding:10px; background:#fff">
+<h2>Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
 
-<h2 style="font-size:16px; margin-bottom:10px;">Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
-
-<div id="lista" style="text-align:center;">Caricamento...</div>
+<div id="lista">Caricamento...</div>
 
 <script>
-// 🔴 Link RAW del tuo CSV su GitHub
 const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
 
-// Funzione per formattare le date in ICS
 function formatDateICS(d){
   const p = n => n.toString().padStart(2,"0");
   return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00";
 }
 
-// Controlla se il nome è cinese (ritorna true se contiene caratteri non latini)
-function isCinese(nome){
-  return /[^\u0000-\u007F]/.test(nome);
-}
+// Salta nomi cinesi
+function isCinese(nome){ return /[^\u0000-\u007F]/.test(nome); }
 
-// Carica i nomi e turni dal CSV
 async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
   if(righe.length < 2){ document.getElementById("lista").innerText = "CSV vuoto"; return; }
 
-  const titoli = righe[0].split(";").map(s => s.trim());
+  const titoli = righe[0].split(";").map(s=>s.trim());
   const nomiMap = new Map();
-
-  const oggi = new Date();
-  oggi.setHours(0,0,0,0);
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
 
   for(let i=1;i<righe.length;i++){
     const celle = righe[i].split(";").map(c=>c.trim());
-    if(celle.length === 0) continue;
+    if(celle.length===0) continue;
 
     const [g,m,a] = celle[0].split("/").map(x=>x.trim());
-    if(!g || !m || !a) continue; // salta riga se data mancante
+    if(!g||!m||!a) continue;
     const dataTurno = new Date(parseInt(a), parseInt(m)-1, parseInt(g));
     if(dataTurno < oggi) continue;
 
     for(let j=1;j<celle.length;j++){
-      if(!celle[j]) continue; // salta celle vuote
+      if(!celle[j]) continue;
       const servizio = titoli[j] ? titoli[j].trim() : "";
       if(!servizio) continue;
 
-      // gestisce più nomi nella stessa cella, separati da ,
       celle[j].split(",").forEach(n=>{
         const nome = n.trim();
-        if(!nome || isCinese(nome)) return; // salta nomi cinesi o vuoti
-
+        if(!nome || isCinese(nome)) return;
         if(!nomiMap.has(nome)) nomiMap.set(nome, []);
-        nomiMap.get(nome).push({data: dataTurno, servizio});
+        nomiMap.get(nome).push({data:dataTurno, servizio});
       });
     }
   }
 
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
-
   [...nomiMap.keys()].sort().forEach(nome=>{
     const btn = document.createElement("button");
     btn.textContent = nome;
-    btn.style.display = "inline-block";       
-    btn.style.width = "calc(50% - 10px)";     
-    btn.style.padding = "8px 10px";           
-    btn.style.margin = "5px";                 
-    btn.style.fontSize = "14px";              
-    btn.style.textAlign = "center";
-    btn.style.border = "1px solid #ccc";
-    btn.style.borderRadius = "4px";
-    btn.style.background = "#f9f9f9";
-    btn.style.boxSizing = "border-box";       
     btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
     lista.appendChild(btn);
   });
 }
 
-// Genera file ICS per un nome
 function generaICS(nomeUtente, turni){
-  let ics = 
-`BEGIN:VCALENDAR
+  let ics = `BEGIN:VCALENDAR
 VERSION:2.0
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 `;
 
-  turni.forEach((t)=>{
+  turni.forEach(t=>{
     const start = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 15,0,0);
     const end   = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 18,0,0);
-
-    ics += 
-`BEGIN:VEVENT
+    ics += `BEGIN:VEVENT
 UID:${nomeUtente}_${t.data.getDate()}-${t.data.getMonth()+1}-${t.data.getFullYear()}_${t.servizio}@turnidomenica
 SUMMARY:${t.servizio}
 DESCRIPTION:${t.servizio} – ${nomeUtente}
@@ -116,7 +110,6 @@ END:VEVENT
   });
 
   ics += "END:VCALENDAR";
-
   const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -124,7 +117,7 @@ END:VEVENT
   link.click();
 }
 
-// Avvia tutto
+// Avvio
 caricaNomi();
 </script>
 
