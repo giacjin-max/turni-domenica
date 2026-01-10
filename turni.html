@@ -8,26 +8,18 @@
 
 <body style="font-family:Arial; padding:15px">
 
-<h2>Tocca il tuo nome per salvare i turni</h2>
+<h2>Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
 
 <div id="lista">Caricamento...</div>
 
 <script>
-// 🔴 CAMBIA SOLO QUESTA RIGA
+// 🔴 CAMBIA SOLO QUESTO LINK con il RAW del tuo CSV su GitHub
 const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
 
 // ---------- FUNZIONI ----------
 function formatDateICS(d){
   const p = n => n.toString().padStart(2,"0");
-  return (
-    d.getFullYear() +
-    p(d.getMonth()+1) +
-    p(d.getDate()) +
-    "T" +
-    p(d.getHours()) +
-    p(d.getMinutes()) +
-    "00"
-  );
+  return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00";
 }
 
 // ---------- CARICA NOMI (solo con turni futuri) ----------
@@ -36,16 +28,16 @@ async function caricaNomi(){
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
   const titoli = righe[0].split(",");
-  const nomiMap = new Map(); // nome -> array di date future
+  const nomiMap = new Map(); // nome -> array di turni
 
   const oggi = new Date();
-  oggi.setHours(0,0,0,0); // solo data
+  oggi.setHours(0,0,0,0);
 
   for(let i=1;i<righe.length;i++){
     const celle = righe[i].split(",");
     const [g,m,a] = celle[0].split("/");
-    const dataTurno = new Date(2000+ +a, parseInt(m)-1, parseInt(g));
-    if(dataTurno < oggi) continue; // solo date future o odierne
+    const dataTurno = new Date(2000 + parseInt(a), parseInt(m)-1, parseInt(g));
+    if(dataTurno < oggi) continue; // solo turni futuri
 
     for(let j=1;j<celle.length;j++){
       if(!celle[j]) continue;
@@ -84,7 +76,7 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 `;
 
-  turni.forEach((t, index)=>{
+  turni.forEach((t)=>{
     const start = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 15,0,0);
     const end   = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 18,0,0);
 
