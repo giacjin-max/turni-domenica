@@ -4,102 +4,179 @@
 <meta charset="utf-8">
 <title>Turni Domenica</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body { font-family: Arial; padding:10px; background:#fff; }
-h2 { font-size:16px; margin-bottom:10px; text-align:center; }
-#lista { display: flex; flex-wrap: wrap; justify-content: center; }
+body {
+  font-family: Arial, sans-serif;
+  padding: 10px;
+  background: #ffffff;
+}
+
+h2 {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+#istruzioni {
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 14px;
+  line-height: 1.4;
+  color: #333;
+}
+
+#lista {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 button {
   flex: 0 0 calc(33.33% - 12px);
   margin: 5px;
-  padding: 12px 8px;
+  padding: 12px 6px;
   font-size: 14px;
-  text-align: center;
   border: 1px solid #ccc;
   border-radius: 6px;
-  background: #f9f9f9;
+  background: #f7f7f7;
   box-sizing: border-box;
 }
+
 @media (max-width: 500px) {
-  button { flex: 0 0 calc(50% - 10px); font-size:13px; padding:10px 5px; }
+  button {
+    flex: 0 0 calc(50% - 10px);
+    font-size: 13px;
+  }
 }
 </style>
 </head>
+
 <body>
 
-<h2>Tocca il tuo nome per scaricare tutti i tuoi turni</h2>
-
-<div id="lista">Caricamento...</div>
+<h2>Tocca il tuo nome</h2>
+<div id="istruzioni"></div>
+<div id="lista">Caricamento…</div>
 
 <script>
+// 🔗 LINK RAW CSV
 const urlCSV = "https://raw.githubusercontent.com/giacjin-max/turni-domenica/refs/heads/main/turni.csv";
 
-function formatDateICS(d){
-  const p = n => n.toString().padStart(2,"0");
-  return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00";
+// ---------------------
+// ISTRUZIONI SEMPLICI
+// ---------------------
+function mostraIstruzioni(){
+  const ua = navigator.userAgent.toLowerCase();
+  const box = document.getElementById("istruzioni");
+
+  if (ua.includes("iphone") || ua.includes("ipad")) {
+    box.innerHTML =
+      "📱 <b>iPhone</b><br>" +
+      "Apri con <b>Safari</b><br>" +
+      "Tocca il tuo nome<br>" +
+      "Conferma su Calendario";
+  }
+  else if (ua.includes("android")) {
+    box.innerHTML =
+      "🤖 <b>Android</b><br>" +
+      "Tocca il tuo nome<br>" +
+      "Apri <b>Google Calendar</b><br>" +
+      "Importa il file";
+  }
+  else {
+    box.innerHTML =
+      "💻 Tocca il tuo nome<br>" +
+      "Aggiungi al calendario";
+  }
 }
 
-// Salta nomi cinesi
-function isCinese(nome){ return /[^\u0000-\u007F]/.test(nome); }
+// ---------------------
+// UTILITY
+// ---------------------
+function isCinese(nome){
+  return /[^\u0000-\u007F]/.test(nome);
+}
 
+function formatICS(d){
+  const p = n => n.toString().padStart(2,"0");
+  return d.getFullYear() +
+         p(d.getMonth()+1) +
+         p(d.getDate()) + "T" +
+         p(d.getHours()) +
+         p(d.getMinutes()) + "00";
+}
+
+// ---------------------
+// CARICA CSV
+// ---------------------
 async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
-  const righe = t.split("\n").filter(x=>x.trim());
-  if(righe.length < 2){ document.getElementById("lista").innerText = "CSV vuoto"; return; }
+  const righe = t.split("\n").filter(r=>r.trim());
 
-  const titoli = righe[0].split(";").map(s=>s.trim());
-  const nomiMap = new Map();
+  if (righe.length < 2) {
+    document.getElementById("lista").innerText = "Nessun turno";
+    return;
+  }
+
+  const titoli = righe[0].split(";").map(x=>x.trim());
+  const mappa = new Map();
   const oggi = new Date(); oggi.setHours(0,0,0,0);
 
-  for(let i=1;i<righe.length;i++){
-    const celle = righe[i].split(";").map(c=>c.trim());
-    if(celle.length===0) continue;
+  for (let i=1;i<righe.length;i++){
+    const celle = righe[i].split(";").map(x=>x.trim());
+    if (!celle[0]) continue;
 
-    const [g,m,a] = celle[0].split("/").map(x=>x.trim());
-    if(!g||!m||!a) continue;
-    const dataTurno = new Date(parseInt(a), parseInt(m)-1, parseInt(g));
-    if(dataTurno < oggi) continue;
+    const [g,m,a] = celle[0].split("/");
+    if (!g||!m||!a) continue;
 
-    for(let j=1;j<celle.length;j++){
-      if(!celle[j]) continue;
-      const servizio = titoli[j] ? titoli[j].trim() : "";
-      if(!servizio) continue;
+    const data = new Date(a, m-1, g);
+    if (data < oggi) continue;
 
+    for (let j=1;j<celle.length;j++){
+      if (!celle[j]) continue;
+      const servizio = titoli[j];
       celle[j].split(",").forEach(n=>{
         const nome = n.trim();
-        if(!nome || isCinese(nome)) return;
-        if(!nomiMap.has(nome)) nomiMap.set(nome, []);
-        nomiMap.get(nome).push({data:dataTurno, servizio});
+        if (!nome || isCinese(nome)) return;
+        if (!mappa.has(nome)) mappa.set(nome, []);
+        mappa.get(nome).push({data, servizio});
       });
     }
   }
 
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
-  [...nomiMap.keys()].sort().forEach(nome=>{
+
+  [...mappa.keys()].sort().forEach(nome=>{
     const btn = document.createElement("button");
     btn.textContent = nome;
-    btn.onclick = ()=>generaICS(nome, nomiMap.get(nome));
+    btn.onclick = ()=>generaICS(nome, mappa.get(nome));
     lista.appendChild(btn);
   });
 }
 
-function generaICS(nomeUtente, turni){
-  let ics = `BEGIN:VCALENDAR
+// ---------------------
+// CREA FILE ICS
+// ---------------------
+function generaICS(nome, turni){
+  let ics =
+`BEGIN:VCALENDAR
 VERSION:2.0
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 `;
 
   turni.forEach(t=>{
-    const start = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 15,0,0);
-    const end   = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 18,0,0);
-    ics += `BEGIN:VEVENT
-UID:${nomeUtente}_${t.data.getDate()}-${t.data.getMonth()+1}-${t.data.getFullYear()}_${t.servizio}@turnidomenica
+    const start = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 15, 0);
+    const end   = new Date(t.data.getFullYear(), t.data.getMonth(), t.data.getDate(), 18, 0);
+
+    ics +=
+`BEGIN:VEVENT
 SUMMARY:${t.servizio}
-DESCRIPTION:${t.servizio} – ${nomeUtente}
-DTSTART:${formatDateICS(start)}
-DTEND:${formatDateICS(end)}
+DESCRIPTION:${t.servizio} – ${nome}
+DTSTART:${formatICS(start)}
+DTEND:${formatICS(end)}
 BEGIN:VALARM
 TRIGGER:-P6D
 ACTION:DISPLAY
@@ -110,14 +187,18 @@ END:VEVENT
   });
 
   ics += "END:VCALENDAR";
+
   const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `turni_${nomeUtente}.ics`;
+  link.download = "turni_" + nome + ".ics";
   link.click();
 }
 
-// Avvio
+// ---------------------
+// AVVIO
+// ---------------------
+mostraIstruzioni();
 caricaNomi();
 </script>
 
