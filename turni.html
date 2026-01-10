@@ -27,7 +27,7 @@ async function caricaNomi(){
   const r = await fetch(urlCSV);
   const t = await r.text();
   const righe = t.split("\n").filter(x=>x.trim());
-  const titoli = righe[0].split(",");
+  const titoli = righe[0].split(/,|;|\//).map(s => s.trim()); // separatori flessibili
   const nomiMap = new Map();
 
   const oggi = new Date();
@@ -35,15 +35,18 @@ async function caricaNomi(){
 
   for(let i=1;i<righe.length;i++){
     const celle = righe[i].split(",");
+    if(celle.length === 0) continue;
+
     const [g,m,a] = celle[0].trim().split("/");
+    if(!g || !m || !a) continue; // salta riga se data mancante
     const dataTurno = new Date(parseInt(a), parseInt(m)-1, parseInt(g));
     if(dataTurno < oggi) continue;
 
     for(let j=1;j<celle.length;j++){
-      if(!celle[j]) continue;
-      const servizio = titoli[j] ? titoli[j].trim() : null;
-      if(!servizio) continue;
-      celle[j].split(/;|\//).forEach(n=>{
+      if(!celle[j] || !celle[j].trim()) continue; // salta celle vuote
+
+      const servizio = titoli[j] ? titoli[j].trim() : "";
+      celle[j].split(/;|,|\//).forEach(n=>{
         const nome = n.trim();
         if(nome){
           if(!nomiMap.has(nome)) nomiMap.set(nome, []);
