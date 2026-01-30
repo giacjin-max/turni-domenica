@@ -75,17 +75,18 @@ function mostraIstruzioni(){
   if (ua.includes("iphone") || ua.includes("ipad")) {
     box.innerHTML =
       "📱 <b>iPhone</b><br>" +
-      "Apri con <b>Safari</b><br>" +
+      "Copia link e aprilo con <b>Safari</b><br>" +
       "Tocca il tuo nome<br>" +
       "Conferma su Calendario";
   }
   else if (ua.includes("android")) {
   box.innerHTML =
     "🤖 <b>Android</b><br>" +
-    "Tocca il tuo nome<br>" +
+    "Copia il link e aprilo col tuo browser<br>" +
+    "Poi tocca il tuo nome<br>" +
     "Apri / importa il file<br>" +
     "con <b>Calendario</b>";
-  }
+}
   else {
     box.innerHTML =
       "💻 Tocca il tuo nome<br>" +
